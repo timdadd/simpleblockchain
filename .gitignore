@@ -1,0 +1,3 @@
+/vendor/
+/db/tx.db
+/db/genesis.json
