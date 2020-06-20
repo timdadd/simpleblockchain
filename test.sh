@@ -59,7 +59,7 @@ if [ $chapter -eq 3 ]; then showDoCmd "./tbb balances list";fi
 
 # Andrej also decides he should be getting 100 tokens per day for maintaining
 # the database and having such a brilliant disruptive idea. (700 per week)
-showDoCmd "./tbb tx add --from=andrej --to=andrej --value=700 --data=services" ${POWDER_BLUE}
+showDoCmd "./tbb tx add --from=andrej --to=andrej --value=700 --data=reward" ${POWDER_BLUE}
 if [ $chapter -eq 3 ]; then showDoCmd "./tbb balances list";fi
 
 # To bring traffic to his bar, Andrej announces an exclusive 100% bonus for everyone who
@@ -73,7 +73,7 @@ showDoCmd "./tbb tx add --from=babayaga --to=andrej --value=1 --data=vodka" ${LI
 if [ $chapter -eq 3 ]; then showDoCmd "./tbb balances list";fi
 
 # Another rewarding day
-showDoCmd "./tbb tx add --from=andrej --to=andrej --value=100 --data=services" ${POWDER_BLUE}
+showDoCmd "./tbb tx add --from=andrej --to=andrej --value=100 --data=reward" ${POWDER_BLUE}
 echo $WHITE"Chapter 3 processed"
 showDoCmd "./tbb balances list"
 
@@ -92,7 +92,7 @@ showDoCmd "./tbb tx add --from=babayaga --to=andrej --value=50 --data=hidden_fee
 if [ $chapter -eq 4 ]; then showDoCmd "./tbb balances list";fi
 
 # Another rewarding day
-showDoCmd "./tbb tx add --from=andrej --to=andrej --value=100 --data=services" ${POWDER_BLUE}
+showDoCmd "./tbb tx add --from=andrej --to=andrej --value=100 --data=reward" ${POWDER_BLUE}
 echo $WHITE"Chapter 4 processed"
 showDoCmd "./tbb balances list"
 
