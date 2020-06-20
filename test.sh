@@ -27,11 +27,6 @@ fi
 source scripts/env.sh
 source scripts/go.sh
 
-# Every blockchain has a "Genesis" file. The Genesis file is used to distribute
-# the first tokens to early blockchain participants.
-showDoCmd "cp -f baseline/genesis.json db"
-showDoCmd "cp -f baseline/tx.db db"
-
 go mod tidy
 go mod vendor
 goFmt
@@ -48,9 +43,14 @@ if [ $chapter -lt 3 -a $chapter -gt 4 ]; then
   exit
 fi
 
+# Every blockchain has a "Genesis" file. The Genesis file is used to distribute
+# the first tokens to early blockchain participants.
+echo $CYAN"Initialis database"
+showDoCmd "cp -f baseline/genesis.json db"
+showDoCmd "rm -f db/*.db"
+
 echo $WHITE"Running Test 3 - First customer"
 
-showDoCmd "rm db/tx.db"
 showDoCmd "./tbb balances list" $YELLOW
 
 ## Andrej purchases 3 shots of vodka from his own bar
@@ -59,7 +59,7 @@ if [ $chapter -eq 3 ]; then showDoCmd "./tbb balances list";fi
 
 # Andrej also decides he should be getting 100 tokens per day for maintaining
 # the database and having such a brilliant disruptive idea. (700 per week)
-showDoCmd "./tbb tx add --from=andrej --to=andrej --value=700 --data=services" ${POWDER_BLUE}
+showDoCmd "./tbb tx add --from=andrej --to=andrej --value=700 --data=reward" ${POWDER_BLUE}
 if [ $chapter -eq 3 ]; then showDoCmd "./tbb balances list";fi
 
 # To bring traffic to his bar, Andrej announces an exclusive 100% bonus for everyone who
@@ -73,7 +73,7 @@ showDoCmd "./tbb tx add --from=babayaga --to=andrej --value=1 --data=vodka" ${LI
 if [ $chapter -eq 3 ]; then showDoCmd "./tbb balances list";fi
 
 # Another rewarding day
-showDoCmd "./tbb tx add --from=andrej --to=andrej --value=100 --data=services" ${POWDER_BLUE}
+showDoCmd "./tbb tx add --from=andrej --to=andrej --value=100 --data=reward" ${POWDER_BLUE}
 echo $WHITE"Chapter 3 processed"
 showDoCmd "./tbb balances list"
 
@@ -92,8 +92,12 @@ showDoCmd "./tbb tx add --from=babayaga --to=andrej --value=50 --data=hidden_fee
 if [ $chapter -eq 4 ]; then showDoCmd "./tbb balances list";fi
 
 # Another rewarding day
-showDoCmd "./tbb tx add --from=andrej --to=andrej --value=100 --data=services" ${POWDER_BLUE}
+showDoCmd "./tbb tx add --from=andrej --to=andrej --value=100 --data=reward" ${POWDER_BLUE}
 echo $WHITE"Chapter 4 processed"
 showDoCmd "./tbb balances list"
 
 if [ $chapter -eq 4 ]; then showDoCmd "./tbb balances state";fi
+
+if [ -f db/tx.db ]; then cat db/tx  .db;fi
+if [ -f db/block.db ]; then cat db/block.db;fi
+

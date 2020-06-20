@@ -36,7 +36,7 @@ var balancesListCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		defer state.Close()
-		fmt.Printf("Accounts balances at %x:\n", state.LatestSnapshot())
+		fmt.Printf("Accounts balances at %x:\n", state.LatestBlockHash())
 		var maxAccountLen int = 7
 		for account := range state.Balances {
 			if len(account) > maxAccountLen {
@@ -65,7 +65,7 @@ var balancesStateCmd = &cobra.Command{
 		js := struct {
 			Snapshot string
 			State    *dao.State
-		}{fmt.Sprintf("%x", state.LatestSnapshot()), state}
+		}{fmt.Sprintf("%x", state.LatestBlockHash()), state}
 		json, err := json.MarshalIndent(js, "", "  ")
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
