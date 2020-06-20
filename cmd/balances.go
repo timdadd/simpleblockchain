@@ -36,7 +36,7 @@ var balancesListCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		defer state.Close()
-
+		fmt.Printf("Accounts balances at %x:\n", state.LatestSnapshot())
 		var maxAccountLen int = 7
 		for account := range state.Balances {
 			if len(account) > maxAccountLen {
@@ -49,13 +49,6 @@ var balancesListCmd = &cobra.Command{
 			tidyFmt := "%s" + strings.Repeat(" ", maxAccountLen-len(account)) + " : %d"
 			fmt.Println(fmt.Sprintf(tidyFmt, account, balance))
 		}
-		//
-		//fmt.Println("Account: balance:")
-		//fmt.Println("__________________")
-		//for account, balance := range state.Balances {
-		//	fmt.Println(account(string) + strings.Repeat(" ", maxAccountLen - len(account)) +":" + balance)
-		//	fmt.Println(fmt.Sprintf("%s: %d", account, balance))
-		//}
 	},
 }
 
@@ -69,8 +62,11 @@ var balancesStateCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		defer state.Close()
-
-		json, err := json.MarshalIndent(state, "", "  ")
+		js := struct {
+			Snapshot string
+			State    *dao.State
+		}{fmt.Sprintf("%x", state.LatestSnapshot()), state}
+		json, err := json.MarshalIndent(js, "", "  ")
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
