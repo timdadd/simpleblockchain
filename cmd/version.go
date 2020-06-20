@@ -7,7 +7,7 @@ import (
 )
 
 const Major = "0"
-const Minor = "6" // add snapshot to verify data authenticity
+const Minor = "7" // add blocks and chains
 const Fix = "0"
 const Verbal = "TX Add & Balances List"
 
