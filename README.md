@@ -11,5 +11,5 @@ If you follow the chapters you can test the scenarios with `./test.sh`
 | ----------------------------------------  | ------------- |
 | Build tdd executable                      | `./test.sh`   |
 | Chapter 3 - the first customer, BabaYaga  | `./test.sh 3` |
-| Chapter 4 - BabaYaga pays Caesar          | `./test.sh 3` |
+| Chapter 4 - BabaYaga pays Caesar          | `./test.sh 4` |
 | Chapter 8 - RESTful API                   | `./test.sh 8` |

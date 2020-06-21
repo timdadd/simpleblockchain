@@ -1,6 +1,6 @@
 # The persistent database
 
-These are the persistent database as follows:
+These are the persistent database files as follows:
 
 | File | Description |
 | --- | ----------- |

@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"os"
 	"simpleblockchain/dao"
 )
@@ -11,14 +10,20 @@ var state *dao.State
 
 // Establish the current state by starting at genesis
 // and applying any existing transactions
-func setState(cmd *cobra.Command, args []string, deferEarly bool) {
+func openState() {
 	var err error
-	state, err = dao.NewStateFromDisk(dataDir)
+	state, err = dao.LoadStateFromDisk(dataDir)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	if deferEarly {
-		defer state.Close()
+}
+
+func closeState() {
+	err := state.Close()
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
+	os.Exit(0)
 }

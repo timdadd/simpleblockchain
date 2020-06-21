@@ -18,7 +18,7 @@ type State struct {
 	latestBlockHash Hash     // Hash code associated with the current block
 }
 
-func NewStateFromDisk(dataDir string) (*State, error) {
+func LoadStateFromDisk(dataDir string) (*State, error) {
 	err := initDataDirIfNotExists(dataDir)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to initialise the data: %w", err)
@@ -49,6 +49,7 @@ func NewStateFromDisk(dataDir string) (*State, error) {
 	scanner := bufio.NewScanner(blockDbFile)
 
 	// Iterate over each the existing transactions in the tx.dao file
+	// Surely everything is in the last line being the last block?
 	for scanner.Scan() {
 		if err := scanner.Err(); err != nil {
 			return nil, err
@@ -69,10 +70,6 @@ func NewStateFromDisk(dataDir string) (*State, error) {
 		// Now we update the state with the hash of the last block
 		state.latestBlockHash = blockFs.Key
 
-	}
-
-	if err != nil {
-		return nil, err
 	}
 
 	return state, nil
@@ -123,8 +120,8 @@ func (s *State) Persist() (Hash, error) {
 		return Hash{}, err
 	}
 
-	fmt.Printf("Persisting new Block to disk:\n")
-	fmt.Printf("\t%s\n", blockFsJson)
+	//fmt.Printf("Persisting new Block to disk:\n")
+	//fmt.Printf("\t%s\n", blockFsJson)
 
 	// Write it to the DB file on a new line
 	_, err = s.blockDbFile.Write(append(blockFsJson, '\n'))
@@ -139,18 +136,21 @@ func (s *State) Persist() (Hash, error) {
 	return s.latestBlockHash, nil
 }
 
-func (s *State) Close() {
-	s.blockDbFile.Close()
+func (s *State) Close() error {
+	err := s.blockDbFile.Close()
+	if err != nil {
+		return fmt.Errorf("Could not close the block file: %w", err)
+	}
+	return nil
 }
 
 // Apply all the transactions in the block
 func (s *State) applyBlock(b Block) error {
 	for _, tx := range b.TXs {
 		if err := s.applyTx(tx); err != nil {
-			return err
+			return fmt.Errorf("Cannot apply block: %w", err)
 		}
 	}
-
 	return nil
 }
 
@@ -172,20 +172,3 @@ func (s *State) applyTx(tx Tx) error {
 
 	return nil
 }
-
-//// take the content of all the transactions and use it to generate a sha256 hash
-//func (s *State) doSnapshot() error {
-//	// Re-read the whole file from the first byte
-//	_, err := s.blockDbFile.Seek(0, 0)
-//	if err != nil {
-//		return err
-//	}
-//
-//	txsData, err := ioutil.ReadAll(s.txDbFile)
-//	if err != nil {
-//		return err
-//	}
-//	s.snapshot = sha256.Sum256(txsData)
-//
-//	return nil
-//}

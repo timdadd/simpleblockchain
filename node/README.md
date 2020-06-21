@@ -1,4 +1,4 @@
-# the HTTTP API
+# the HTTP API
 
 [Why is this package called `node`?](https://en.bitcoin.it/wiki/Full_node)
  
@@ -21,7 +21,8 @@ Provides a json list of account balances
 
 ##  http://.../tx/add
 This adds a transaction to the blockchain.  The body of the 'POST' provides details of the transaction.
-### Example JSON Request
+
+#### Example JSON Request
 ```json
 {
   "from": "andrej",
@@ -29,7 +30,15 @@ This adds a transaction to the blockchain.  The body of the 'POST' provides deta
   "value": 100
 }
 ```
-### Example JSON Response
+#### Example JSON Response
+```json
+{
+  "block_hash" : "5591d6cea7f..."
+}
+```
+#### What does the block within the chain look like?
+The `"hash"` represents the hash of the block payload.  The `"parent"` hash represents the hash of
+the previous block.  So the next block in the chain with use the `"hash"` as the `"parent"`.
 ```json
 {
   "hash":"5591d6cea7...",
@@ -45,10 +54,5 @@ This adds a transaction to the blockchain.  The body of the 'POST' provides deta
       "data":""
     }]
   }
-}
-```
-```json
-{
-  "block_hash" : "5591d6cea7f..."
 }
 ```

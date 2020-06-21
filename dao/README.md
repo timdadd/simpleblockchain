@@ -10,6 +10,7 @@ These are all the data access/model objects as follows:
 | tx | Handling of transactions / events for the block chain |
 | block | One block in the chain which includes sha256 key to ensure sequence integity |
 
-##Block concept
+## Block concept
 ![Blockchain](blockLinking.png)
+
 Picture courtesy of [Lukas Lukac](https://gumroad.com/l/build-a-blockchain-from-scratch-in-go) tutorial

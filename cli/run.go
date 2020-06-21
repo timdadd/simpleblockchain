@@ -14,7 +14,10 @@ func RunCmd() *cobra.Command {
 		Use:   "run",
 		Short: "Launches the TBB node and its HTTP API.",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			setState(cmd, args, false)
+			openState()
+		},
+		PersistentPostRun: func(cmd *cobra.Command, args []string) {
+			closeState()
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println("Launching TBB node and its HTTP API...")

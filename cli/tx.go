@@ -20,7 +20,10 @@ func TxCmd() *cobra.Command {
 			return IncorrectUsageErr()
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			setState(cmd, args, false)
+			openState()
+		},
+		PersistentPostRun: func(cmd *cobra.Command, args []string) {
+			closeState()
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 		},
@@ -42,17 +45,16 @@ func txAddCmd() *cobra.Command {
 			data, _ := cmd.Flags().GetString(flagData)
 
 			tx := dao.NewTx(dao.NewAccount(from), dao.NewAccount(to), value, data)
-			defer state.Close()
 
 			err := state.AddTx(tx)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
+				_, _ = fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
 			}
 
 			_, err = state.Persist()
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
+				_, _ = fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
 			}
 
@@ -61,15 +63,15 @@ func txAddCmd() *cobra.Command {
 	}
 
 	cmd.Flags().String(flagFrom, "", "From what account to send tokens")
-	cmd.MarkFlagRequired(flagFrom)
+	_ = cmd.MarkFlagRequired(flagFrom)
 
 	cmd.Flags().String(flagTo, "", "To what account to send tokens")
-	cmd.MarkFlagRequired(flagTo)
+	_ = cmd.MarkFlagRequired(flagTo)
 
 	cmd.Flags().Uint(flagValue, 0, "How many tokens to send")
-	cmd.MarkFlagRequired(flagValue)
+	_ = cmd.MarkFlagRequired(flagValue)
 
-	cmd.Flags().String(flagData, "", "e.g.: 'reward', 'services',' vodka' ...")
+	_ = cmd.Flags().String(flagData, "", "e.g.: 'reward', 'services',' vodka' ...")
 
 	return cmd
 }

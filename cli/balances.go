@@ -17,7 +17,10 @@ func BalancesCmd() *cobra.Command {
 			return ErrIncorrectUsage
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			setState(cmd, args, true)
+			openState()
+		},
+		PersistentPostRun: func(cmd *cobra.Command, args []string) {
+			closeState()
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 		},
@@ -54,12 +57,12 @@ var balancesStateCmd = &cobra.Command{
 	Short: "State of balances (json).",
 	Run: func(cmd *cobra.Command, args []string) {
 		js := struct {
-			Snapshot string
-			State    *dao.State
+			ParentHash string
+			State      *dao.State
 		}{fmt.Sprintf("%x", state.LatestBlockHash()), state}
 		json, err := json.MarshalIndent(js, "", "  ")
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			_, _ = fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 		fmt.Println(string(json))
