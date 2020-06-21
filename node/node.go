@@ -1,6 +1,7 @@
 package node
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -8,101 +9,137 @@ import (
 	"simpleblockchain/dao"
 )
 
-type ErrRes struct {
-	Error string `json:"error"`
+const DefaultIP = "127.0.0.1"
+const DefaultHTTPort = 8080
+const endpointStatus = "/node/status"
+
+const endpointSync = "/node/sync"
+const endpointSyncQueryKeyFromBlock = "fromBlock"
+
+const endpointAddPeer = "/node/peer"
+const endpointAddPeerQueryKeyIP = "ip"
+const endpointAddPeerQueryKeyPort = "port"
+
+const EndpointBalancesList = "/balances/list"
+const EndpointTxAdd = "/tx/add"
+
+type PeerNode struct {
+	IP          string `json:"ip"`
+	Port        uint64 `json:"port"`
+	IsBootstrap bool   `json:"is_bootstrap"`
+
+	// Whenever this node already established connection, sync with this Peer
+	connected bool
 }
 
-type BalancesRes struct {
-	Hash     dao.Hash             `json:"block_hash"`
-	Balances map[dao.Account]uint `json:"balances"`
+func (pn PeerNode) TcpAddress() string {
+	return fmt.Sprintf("%s:%d", pn.IP, pn.Port)
 }
 
-type TxAddReq struct {
-	From  string `json:"from"`
-	To    string `json:"to"`
-	Value uint   `json:"value"`
-	Data  string `json:"data"`
+type Node struct {
+	ip   string
+	port uint64
+
+	state *dao.State
+
+	knownPeers map[string]PeerNode
 }
 
-type TxAddRes struct {
-	Hash dao.Hash `json:"block_hash"`
+func New(s *dao.State, ip string, port uint64, bootstrap PeerNode) *Node {
+	knownPeers := make(map[string]PeerNode)
+	knownPeers[bootstrap.TcpAddress()] = bootstrap
+
+	return &Node{
+		state:      s,
+		ip:         ip,
+		port:       port,
+		knownPeers: knownPeers,
+	}
 }
 
-func Run(httpPort int, state *dao.State) error {
-	fmt.Println(fmt.Sprintf("Listening on HTTP port: %d", httpPort))
+func NewPeerNode(ip string, port uint64, isBootstrap bool, connected bool) PeerNode {
+	return PeerNode{ip, port, isBootstrap, connected}
+}
 
-	defer state.Close()
+func (n *Node) Run() error {
+	ctx := context.Background()
+	fmt.Println(fmt.Sprintf("Listening on: %s:%d", n.ip, n.port))
 
-	http.HandleFunc("/balances/list", func(w http.ResponseWriter, r *http.Request) {
-		listBalancesHandler(w, r, state)
+	go n.sync(ctx)
+
+	http.HandleFunc(EndpointBalancesList, func(w http.ResponseWriter, r *http.Request) {
+		listBalancesHandler(w, r, n.state)
 	})
 
-	http.HandleFunc("/tx/add", func(w http.ResponseWriter, r *http.Request) {
-		txAddHandler(w, r, state)
+	http.HandleFunc(EndpointTxAdd, func(w http.ResponseWriter, r *http.Request) {
+		txAddHandler(w, r, n.state)
 	})
 
-	return http.ListenAndServe(fmt.Sprintf(":%d", httpPort), nil)
+	http.HandleFunc(endpointStatus, func(w http.ResponseWriter, r *http.Request) {
+		statusHandler(w, r, n)
+	})
+
+	http.HandleFunc(endpointSync, func(w http.ResponseWriter, r *http.Request) {
+		syncHandler(w, r, n)
+	})
+
+	http.HandleFunc(endpointAddPeer, func(w http.ResponseWriter, r *http.Request) {
+		addPeerHandler(w, r, n)
+	})
+
+	err := n.writeThisPeerNode()
+	if err != nil {
+		return fmt.Errorf("Error writing the node information: %w", err)
+	}
+
+	return http.ListenAndServe(fmt.Sprintf(":%d", n.port), nil)
 }
 
-func listBalancesHandler(w http.ResponseWriter, r *http.Request, state *dao.State) {
-	writeRes(w, BalancesRes{state.LatestBlockHash(), state.Balances})
+func (n *Node) AddPeer(peer PeerNode) {
+	n.knownPeers[peer.TcpAddress()] = peer
 }
 
-func txAddHandler(w http.ResponseWriter, r *http.Request, state *dao.State) {
-	req := TxAddReq{}
-	err := readReq(r, &req)
-	if err != nil {
-		writeErrRes(w, err)
-		return
-	}
-
-	tx := dao.NewTx(dao.NewAccount(req.From), dao.NewAccount(req.To), req.Value, req.Data)
-
-	err = state.AddTx(tx)
-	if err != nil {
-		writeErrRes(w, err)
-		return
-	}
-
-	hash, err := state.Persist()
-	if err != nil {
-		writeErrRes(w, err)
-		return
-	}
-
-	writeRes(w, TxAddRes{hash})
+func (n *Node) RemovePeer(peer PeerNode) {
+	delete(n.knownPeers, peer.TcpAddress())
 }
 
-func writeErrRes(w http.ResponseWriter, err error) {
-	jsonErrRes, _ := json.Marshal(ErrRes{err.Error()})
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusInternalServerError)
-	w.Write(jsonErrRes)
+func (n *Node) IsKnownPeer(peer PeerNode) bool {
+	if peer.IP == n.ip && peer.Port == n.port {
+		return true
+	}
+
+	_, isKnownPeer := n.knownPeers[peer.TcpAddress()]
+
+	return isKnownPeer
 }
 
-func writeRes(w http.ResponseWriter, content interface{}) {
-	contentJson, err := json.Marshal(content)
+func (n *Node) writeThisPeerNode() error {
+	// Make a note of this node
+	thisPeerNode := PeerNode{
+		IP:          n.ip,
+		Port:        n.port,
+		IsBootstrap: false,
+		connected:   false,
+	}
+	thisPeerNodeJson, err := json.Marshal(thisPeerNode)
 	if err != nil {
-		writeErrRes(w, err)
-		return
+		return fmt.Errorf("Cannot marshall this peer node to json: %w", err)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(contentJson)
+	return ioutil.WriteFile(dao.GetThisPeerJsonFilePath(n.state.DataDir()), thisPeerNodeJson, 0644)
 }
 
-func readReq(r *http.Request, reqBody interface{}) error {
-	reqBodyJson, err := ioutil.ReadAll(r.Body)
+func LoadThisPeerNoce(dataDir string) (PeerNode, error) {
+	content, err := ioutil.ReadFile(dao.GetThisPeerJsonFilePath(dataDir))
 	if err != nil {
-		return fmt.Errorf("unable to read request body. %s", err.Error())
-	}
-	defer r.Body.Close()
-
-	err = json.Unmarshal(reqBodyJson, reqBody)
-	if err != nil {
-		return fmt.Errorf("unable to unmarshal request body. %s", err.Error())
+		return PeerNode{}, err
 	}
 
-	return nil
+	var loadedPeerNode PeerNode
+	err = json.Unmarshal(content, &loadedPeerNode)
+	if err != nil {
+		return PeerNode{}, err
+	}
+
+	return loadedPeerNode, nil
 }

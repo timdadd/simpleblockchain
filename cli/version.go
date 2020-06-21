@@ -7,9 +7,9 @@ import (
 )
 
 const Major = "0"
-const Minor = "8" // Transparent Db
+const Minor = "10" // Transparent Db
 const Fix = "0"
-const Verbal = "HTTP API"
+const Verbal = "Peer-to-Peer DB Sync"
 
 var ErrIncorrectUsage = errors.New("Incorrect Usage")
 

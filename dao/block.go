@@ -1,9 +1,14 @@
 package dao
 
 import (
+	"bufio"
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"os"
+	"reflect"
 )
 
 type Hash [32]byte
@@ -17,6 +22,15 @@ func (h *Hash) UnmarshalText(data []byte) error {
 	return err
 }
 
+func (h Hash) Hex() string {
+	return hex.EncodeToString(h[:])
+}
+
+func (h Hash) IsEmpty() bool {
+	emptyHash := Hash{}
+	return bytes.Equal(emptyHash[:], h[:])
+}
+
 type Block struct {
 	Header BlockHeader `json:"header"`  // metadata (parent block hash + time)
 	TXs    []Tx        `json:"payload"` // new transactions only (payload)
@@ -24,8 +38,9 @@ type Block struct {
 
 // This is the header of the block
 type BlockHeader struct {
-	Parent Hash   `json:"parent"`
-	Time   uint64 `json:"time"`
+	Parent      Hash   `json:"parent"` // The hash of the previous block
+	BlockNumber uint64 `json:"number"` // A sequence number for the block, "block height"
+	Time        uint64 `json:"time"`   // The time this block was completed
 }
 
 // This is what's written to the filesystem
@@ -37,9 +52,9 @@ type BlockFS struct {
 }
 
 // A block is made up of a header and transactions
-// A block header has the time and the parent
-func NewBlock(parent Hash, time uint64, txs []Tx) Block {
-	return Block{BlockHeader{parent, time}, txs}
+// A block header has the time, sequence number and the hash of the previous block
+func NewBlock(parent Hash, blockNumber uint64, time uint64, txs []Tx) Block {
+	return Block{BlockHeader{parent, blockNumber, time}, txs}
 }
 
 // This genereates a hash for a block
@@ -48,6 +63,44 @@ func (b Block) Hash() (Hash, error) {
 	if err != nil {
 		return Hash{}, err
 	}
-
 	return sha256.Sum256(blockJson), nil
+}
+
+// This returns all the blocks after a specific hash
+func GetBlocksAfter(blockHash Hash, s *State) ([]Block, error) {
+	f, err := os.OpenFile(getBlocksDbFilePath(s.dataDir), os.O_RDONLY, 0600)
+	if err != nil {
+		return nil, fmt.Errorf("Could not open the local blocks file: %w", err)
+	}
+
+	blocks := make([]Block, 0)
+	shouldStartCollecting := false
+
+	if reflect.DeepEqual(blockHash, Hash{}) {
+		shouldStartCollecting = true
+	}
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			return nil, fmt.Errorf("Cannot read line from block: %w", err)
+		}
+
+		// Read next json message within the block
+		blockFsJson := scanner.Bytes()
+		var blockFs BlockFS
+		err = json.Unmarshal(blockFsJson, &blockFs)
+		if err != nil {
+			return nil, fmt.Errorf("Cannot interpret json %v: %w", blockFsJson, err)
+		}
+
+		// Are we starting to collect blocks?
+		if shouldStartCollecting {
+			blocks = append(blocks, blockFs.Value)
+		} else if blockHash == blockFs.Key { // Should we start collecting blocks?
+			shouldStartCollecting = true
+		}
+	}
+
+	return blocks, nil
 }

@@ -1,10 +1,15 @@
 package cli
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/spf13/cobra"
+	"net/http"
 	"os"
 	"simpleblockchain/dao"
+	"simpleblockchain/node"
+	"time"
 )
 
 const flagFrom = "from"
@@ -45,20 +50,64 @@ func txAddCmd() *cobra.Command {
 			data, _ := cmd.Flags().GetString(flagData)
 
 			tx := dao.NewTx(dao.NewAccount(from), dao.NewAccount(to), value, data)
+			var txAddRes node.TxAddRes
 
-			err := state.AddTx(tx)
-			if err != nil {
-				_, _ = fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
+			// If we don't have a connection to the server then
+			// we directly call the blockchain routines
+			if conn == nil {
+				block := dao.NewBlock(
+					state.LatestBlockHash(),
+					state.NextBlockNumber(),
+					uint64(time.Now().Unix()),
+					[]dao.Tx{tx},
+				)
+				var err error
+				txAddRes.Hash, err = state.AddBlock(block)
+				if err != nil {
+					_, _ = fmt.Fprintln(os.Stderr, err)
+					return
+				}
+			} else {
+				// Send the request to the server
+				url := fmt.Sprintf("http://%s%s", thisPeerNode.TcpAddress(), node.EndpointTxAdd)
+				jsonTx, err := json.Marshal(tx)
+				if err != nil {
+					_, _ = fmt.Fprintln(os.Stderr, err)
+					return
+				}
+				req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonTx))
+				if err != nil {
+					_, _ = fmt.Fprintln(os.Stderr, err)
+					return
+				}
+				req.Header.Set("Content-Type", "application/json")
+
+				client := &http.Client{}
+				resp, err := client.Do(req) // Send the post and hopefully get a response
+				if err != nil {
+					_, _ = fmt.Fprintln(os.Stderr, err)
+					return
+				}
+				defer resp.Body.Close()
+				err = json.NewDecoder(resp.Body).Decode(&txAddRes)
+				if err != nil {
+					_, _ = fmt.Fprintln(os.Stderr, err)
+					return
+				}
+
+				//fmt.Println("response Status:", resp.Status)
+				//fmt.Println("response Headers:", resp.Header)
+				//body, _ := ioutil.ReadAll(resp.Body)
+				//err = json.Unmarshal(body, &txAddRes)
+				//fmt.Println("response Body:", string(body))
+				//if err != nil {
+				//	_, _ = fmt.Fprintln(os.Stderr, err)
+				//	return
+				//}
+
 			}
 
-			_, err = state.Persist()
-			if err != nil {
-				_, _ = fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
-			}
-
-			fmt.Println("TX successfully added to the ledger.")
+			fmt.Printf("TX successfully added to the ledger. %v\n", txAddRes.Hash.Hex())
 		},
 	}
 

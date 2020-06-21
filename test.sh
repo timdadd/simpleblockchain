@@ -50,6 +50,8 @@ showDoCmd "go build -o tbb" $GREEN
 # Every blockchain has a "Genesis" file. The Genesis file is used to distribute
 # the first tokens to early blockchain participants.
 echo $CYAN"Clear database"
+killall tbb || true
+showDoCmd "rm -f $datad/thispeernode.json"
 showDoCmd "rm -f $datad/db/*.*"
 
 showDoCmd "./tbb version" $CYAN$'\n'
@@ -115,7 +117,6 @@ fi
 if [ $chapter -ge 8 ]; then
   echo $WHITE"Running Chapter 8 - Andrej pays BabaYaga 100 units via the RESTful API"
   echo "${WHITE}Starting the node"
-  killall tbb
   ./tbb run &
   sleep 1
   showDoCmd "curl -s --http2 http://localhost:8080/balances/list | json_pp" $CYAN
@@ -128,6 +129,22 @@ if [ $chapter -ge 8 ]; then
   echo $GREEN"Burn out compensation added"
   showDoCmd "./tbb balances list"
 fi
+
+if [ $chapter -ge 10 ]; then
+  echo $WHITE"Running Chapter 10 - Peer-to-Peer DB Sync"
+  showDoCmd "curl -s --http2 curl -X GET http://localhost:8080/node/status | json_pp" $CYAN
+#  tx_postman andrej babayaga 100 gift $POWDER_BLUE
+#  ## This next line shows the wrong balance because the state is persisted in memory of other the API process
+#  echo $GREEN"Chapter 8 processed"
+#  showDoCmd "curl -s --http2 http://localhost:8080/balances/list | json_pp"
+#  ## Burn out compensation
+#  showDoCmd "./tbb tx add --from=andrej --to=andrej --value=24700 --data=reward" ${POWDER_BLUE}
+#  echo $GREEN"Burn out compensation added"
+  showDoCmd "./tbb balances list"
+fi
+
+
+
 
 if [ $chapter ]; then echo $WHITE"All done up until chapter $chapter";fi
 
