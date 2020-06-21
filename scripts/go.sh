@@ -6,7 +6,7 @@
 # go fmt ./...
 function goFmt() {
   echo -n "${CYAN}Format check: "
-  fmtErrors=$(find . -type f -name \*.go | xargs gofmt -l 2>&2 || true)
+  fmtErrors=$(find . -type f -name \*.go | xargs gofmt -l 2>&1 || true)
   if [ "${fmtErrors}" ]; then
       for f in ${fmtErrors}; do
         case "$f" in
@@ -26,10 +26,10 @@ function goFmt() {
 # Run `go vet` against all targets. If problems are found - print them to stderr (&2)
 function goVet() {
   echo -n "${CYAN}Vetting..."
-  VetErrors=$(go vet ./... 2>&2 || true)
-  if [ "${VetErrors}" ]; then
+  vetErrors=$(go vet ./... 2>&1 || true)
+  if [ -n "${vetErrors}" ]; then
       echo "${RED}FAIL"
-      echo "${ERRS}${WHITE}"
+      echo "${vetErrors}${WHITE}"
       exit 1
   fi
   echo "${GREEN}VETTED OK$WHITE"

@@ -5,34 +5,29 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 )
 
+type Balances map[Account]uint
+
 type State struct {
-	Balances  map[Account]uint // The current balances
-	txMempool []Tx             // The transactions that are executed but not in the tx.dao file
+	Balances  Balances // The current balances
+	txMempool []Tx     // The transactions that are executed but not in the tx.dao file
 
 	blockDbFile     *os.File // The handler to the transaction file
 	latestBlockHash Hash     // Hash code associated with the current block
 }
 
-const (
-	databaseDir = "db"
-)
-
-func NewStateFromDisk() (*State, error) {
-	// get current working directory or error
-	cwd, err := os.Getwd()
+func NewStateFromDisk(dataDir string) (*State, error) {
+	err := initDataDirIfNotExists(dataDir)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to initialise the data: %w", err)
 	}
 
-	//Determine the genesis.json filepath
-	genFilePath := filepath.Join(cwd, databaseDir, "genesis.json")
-	gen, err := loadGenesis(genFilePath)
+	// Load the genesis file
+	gen, err := loadGenesis(getGenesisJsonFilePath(dataDir))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to load the genesis file: %w", err)
 	}
 
 	// Load the balances for each account
@@ -41,22 +36,10 @@ func NewStateFromDisk() (*State, error) {
 		balances[account] = balance
 	}
 
-	// Now apply the transactions in the transaction file which is a set of json messages
-	// From chapter 7, move from all transactions to blocks of transactions
-	blockDbFilePath := filepath.Join(cwd, databaseDir, "block.db")
-	// If the file doesn't exist then create it
-	_, err = os.Stat(blockDbFilePath)
-	if os.IsNotExist(err) {
-		_, err = os.Create(blockDbFilePath)
-	}
-	if err != nil {
-		return nil, err
-	}
-
 	// Now open the file for append as well as read
-	blockDbFile, err := os.OpenFile(blockDbFilePath, os.O_APPEND|os.O_RDWR, 0600)
+	blockDbFile, err := os.OpenFile(getBlocksDbFilePath(dataDir), os.O_APPEND|os.O_RDWR, 0600)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Cannot open block file: %w", err)
 	}
 
 	// Create the baseline state

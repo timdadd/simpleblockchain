@@ -5,4 +5,4 @@ The are common scripts I re-use across projects.  These work on `GNU bash, versi
 | File | Description |
 | --- | ----------- |
 | env.sh | Some stuff about the environment |
-| go.sh | Some common scripts related to GO |
+| go.sh | Some common scripts related to GO, formatting & vetting |

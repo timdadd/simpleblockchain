@@ -1,0 +1,13 @@
+{{ define "genesis" }}
+{
+  "genesis_time": "{{ $.genesisTime }}",
+  "chain_id": "{{ $.chainId }}",
+  "balances": {
+    {{- $first := true }}
+    {{- range $account, $balance := $.balances }}
+      {{- if $first}}{{$first = false}}{{else}},{{end}}
+    "{{$account}}": {{$balance}}
+    {{- end }}
+  }
+}
+{{end}}

@@ -10,7 +10,19 @@ show_help () {
     echo "Usage: $0 {chapter number}" >&2
     echo "   3 ..... First customer, BabaYaga"
     echo "   4 ..... BabaYaga pays rent to Caesar"
+    echo "   8 ..... HTTP API"
     echo "     ..... No number, build only"
+}
+
+## tx_postman 1:from 2:to 3:value 4:data 5:colour
+tx_postman () {
+  cmd=$'curl -s --location --request POST \'http:/localhost:8080/tx/add\'
+  --header \'Content-Type: application/json\'
+  --data-raw \'{"from": "'$1'","to": "'$2'","value": '$3"}'"
+echo $5$cmd
+echo $cmd | bash
+echo
+#bash -c "$cmd"
 }
 
 RED=$(tput setaf 1)
@@ -18,11 +30,13 @@ YELLOW=$(tput setaf 3)
 CYAN=$(tput setaf 6)
 
 projd=$PWD # make a note of the project directory
-if [ ! -d $projd/cmd ];then
-  echo "${RED}Why is there no ${YELLOW}cmd${RED} directory?"
+if [ ! -d $projd/cli ];then
+  echo "${RED}Why is there no ${YELLOW}cli${RED} directory?"
   echo "${CYAN}This script should be run from project root${WHITE}"
   exit 1
 fi
+
+datad="$projd/data"
 
 source scripts/env.sh
 source scripts/go.sh
@@ -32,24 +46,25 @@ go mod vendor
 goFmt
 goVet
 showDoCmd "go build -o tbb" $GREEN
+
+# Every blockchain has a "Genesis" file. The Genesis file is used to distribute
+# the first tokens to early blockchain participants.
+echo $CYAN"Clear database"
+showDoCmd "rm -f $datad/db/*.*"
+
 showDoCmd "./tbb version" $CYAN$'\n'
 showDoCmd "./tbb balances list" $YELLOW$'\n'
 
 if [ $# -eq 0 ];then exit;fi
 
 chapter=$1
-if [ $chapter -lt 3 -a $chapter -gt 4 ]; then
+if [ $chapter -lt 3 -a $chapter -gt 8 ]; then
   show_help
   exit
 fi
 
-# Every blockchain has a "Genesis" file. The Genesis file is used to distribute
-# the first tokens to early blockchain participants.
-echo $CYAN"Initialis database"
-showDoCmd "cp -f baseline/genesis.json db"
-showDoCmd "rm -f db/*.db"
 
-echo $WHITE"Running Test 3 - First customer"
+echo $WHITE"Running Chapter 3 - First customer"
 
 showDoCmd "./tbb balances list" $YELLOW
 
@@ -98,6 +113,16 @@ showDoCmd "./tbb balances list"
 
 if [ $chapter -eq 4 ]; then showDoCmd "./tbb balances state";fi
 
-if [ -f db/tx.db ]; then cat db/tx  .db;fi
-if [ -f db/block.db ]; then cat db/block.db;fi
+if [ $chapter -gt 4 ]; then
+  echo "${WHITE}Starting the node"
+  killall tbb
+  ./tbb run &
+  sleep 1
+  showDoCmd "curl -s --http2 http://localhost:8080/balances/list | json_pp" $CYAN
+  tx_postman andrej babayaga 100 gift $POWDER_BLUE
+  showDoCmd "curl -s --http2 http://localhost:8080/balances/list | json_pp" $YELLOW
+fi
+
+if [ -f $datad/tx.db ]; then cat db/tx  .db;fi
+if [ -f $datad/block.db ]; then cat db/block.db;fi
 

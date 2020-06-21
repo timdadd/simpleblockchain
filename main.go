@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"os"
-	"simpleblockchain/cmd"
+	"simpleblockchain/cli"
 )
 
 func main() {
@@ -15,9 +15,12 @@ func main() {
 		},
 	}
 
-	tbbCmd.AddCommand(cmd.VersionCmd)
-	tbbCmd.AddCommand(cmd.BalancesCmd())
-	tbbCmd.AddCommand(cmd.TxCmd())
+	cli.AddGlobalFlags(tbbCmd)
+
+	tbbCmd.AddCommand(cli.VersionCmd)
+	tbbCmd.AddCommand(cli.BalancesCmd())
+	tbbCmd.AddCommand(cli.RunCmd())
+	tbbCmd.AddCommand(cli.TxCmd())
 
 	err := tbbCmd.Execute()
 	if err != nil {
