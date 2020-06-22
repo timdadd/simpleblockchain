@@ -58,6 +58,7 @@ func txAddCmd() *cobra.Command {
 				block := dao.NewBlock(
 					state.LatestBlockHash(),
 					state.NextBlockNumber(),
+					0,
 					uint64(time.Now().Unix()),
 					[]dao.Tx{tx},
 				)

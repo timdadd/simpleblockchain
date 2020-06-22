@@ -60,6 +60,7 @@ func txAddHandler(w http.ResponseWriter, r *http.Request, state *dao.State) {
 	block := dao.NewBlock(
 		state.LatestBlockHash(),
 		state.NextBlockNumber(),
+		0,
 		uint64(time.Now().Unix()),
 		[]dao.Tx{tx},
 	)

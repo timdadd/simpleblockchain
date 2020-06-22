@@ -34,6 +34,11 @@ go mod tidy
 go mod vendor
 goFmt
 goVet
+echo "${ORANGE}Running tests$WHITE"
+go test -v ./... 2>&1
+go test -bench . ./... 2>&1
+echo $WHITE
+
 showDoCmd "go build -o tbb" $GREEN
 
 # Every blockchain has a "Genesis" file. The Genesis file is used to distribute

@@ -40,6 +40,7 @@ type Block struct {
 type BlockHeader struct {
 	Parent      Hash   `json:"parent"` // The hash of the previous block
 	BlockNumber uint64 `json:"number"` // A sequence number for the block, "block height"
+	Nonce       uint32 `json:"nonce"`  // Adding a bit of randomness to the block hash
 	Time        uint64 `json:"time"`   // The time this block was completed
 }
 
@@ -53,17 +54,29 @@ type BlockFS struct {
 
 // A block is made up of a header and transactions
 // A block header has the time, sequence number and the hash of the previous block
-func NewBlock(parent Hash, blockNumber uint64, time uint64, txs []Tx) Block {
-	return Block{BlockHeader{parent, blockNumber, time}, txs}
+func NewBlock(parent Hash, blockNumber uint64, nonce uint32, time uint64, txs []Tx) Block {
+	return Block{BlockHeader{parent, blockNumber, nonce, time}, txs}
 }
 
-// This genereates a hash for a block
+// This generates a hash for a block
 func (b Block) Hash() (Hash, error) {
 	blockJson, err := json.Marshal(b)
 	if err != nil {
 		return Hash{}, err
 	}
 	return sha256.Sum256(blockJson), nil
+}
+
+func IsBlockHashValid(hash Hash) bool {
+	// 184648311	         6.36 ns/op
+	return bytes.Equal(hash[:2], []byte{0, 0})
+	// 8908318	       118 ns/op
+	//return hash.Hex()[0:4] == "0000"
+	// 4187757	       252 ns/op
+	//return fmt.Sprintf("%x", hash[0]) == "0" &&
+	//	fmt.Sprintf("%x", hash[1]) == "0" &&
+	//	fmt.Sprintf("%x", hash[2]) == "0" &&
+	//	fmt.Sprintf("%x", hash[3]) != "0"
 }
 
 // This returns all the blocks after a specific hash
