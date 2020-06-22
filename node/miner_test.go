@@ -34,7 +34,7 @@ func TestIsBlockHashValid(t *testing.T) {
 // The first argument it the testing helper `t *testing.T`,
 // automatically injected by the Go test compiler.
 
-func BenchmarkTestValidBlockHash(b *testing.B) {
+func BenchmarkIsBlockHashValid(b *testing.B) {
 	hexHash := "000000fa04f816039...a4db586086168edfa"
 	var hash = dao.Hash{}
 	// Convert it to raw bytes
