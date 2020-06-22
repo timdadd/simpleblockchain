@@ -23,29 +23,32 @@ func (n *Node) sync(ctx context.Context) error {
 }
 
 func (n *Node) doSync() {
+	// Loop through all the kmowm [eers
 	for _, peer := range n.knownPeers {
+		// Ignore ourselves
 		if n.ip == peer.IP && n.port == peer.Port {
 			continue
 		}
 
 		fmt.Printf("Searching for new Peers and their Blocks and Peers: '%s'\n", peer.TcpAddress())
-
+		// Get the status of the peer
 		status, err := queryPeerStatus(peer)
+		// If the peer has disapeered (pun) then remove from our list of known peers
 		if err != nil {
 			fmt.Printf("ERROR: %s\n", err)
 			fmt.Printf("Peer '%s' was removed from KnownPeers\n", peer.TcpAddress())
-
 			n.RemovePeer(peer)
-
 			continue
 		}
 
+		// Confirm with this peer our IP & port number
 		err = n.joinKnownPeers(peer)
 		if err != nil {
 			fmt.Printf("ERROR: %s\n", err)
 			continue
 		}
 
+		// Now sync and blocks this peer might know about
 		err = n.syncBlocks(peer, status)
 		if err != nil {
 			fmt.Printf("ERROR: %s\n", err)

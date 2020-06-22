@@ -14,17 +14,6 @@ show_help () {
     echo "     ..... No number, build only"
 }
 
-## tx_postman 1:from 2:to 3:value 4:data 5:colour
-tx_postman () {
-  cmd=$'curl -s --location --request POST \'http:/localhost:8080/tx/add\'
-  --header \'Content-Type: application/json\'
-  --data-raw \'{"from": "'$1'","to": "'$2'","value": '$3"}'"
-echo $5$cmd
-echo $cmd | bash
-echo
-#bash -c "$cmd"
-}
-
 RED=$(tput setaf 1)
 YELLOW=$(tput setaf 3)
 CYAN=$(tput setaf 6)
@@ -52,7 +41,9 @@ showDoCmd "go build -o tbb" $GREEN
 echo $CYAN"Clear database"
 killall tbb || true
 showDoCmd "rm -f $datad/thispeernode.json"
-showDoCmd "rm -f $datad/db/*.*"
+for d in $datad/*/; do
+  rm -fR $d
+done
 
 showDoCmd "./tbb version" $CYAN$'\n'
 showDoCmd "./tbb balances list" $YELLOW$'\n'
@@ -64,8 +55,6 @@ if [ $chapter -lt 3 -a $chapter -gt 8 ]; then
   show_help
   exit
 fi
-
-
 
 if [ $chapter -ge 3 ]; then
   echo $WHITE"Running Chapter 3 - First customer"
@@ -95,7 +84,6 @@ if [ $chapter -ge 3 ]; then
   showDoCmd "./tbb balances list" $YELLOW
 fi
 
-
 if [ $chapter -ge 4 ]; then
   echo $WHITE"Running Chapter 4 - BabaYaga pays rent to Caesar and Andrej takes his cut"
   # Rent payment
@@ -115,40 +103,73 @@ if [ $chapter -ge 4 ]; then
 fi
 
 if [ $chapter -ge 8 ]; then
-  echo $WHITE"Running Chapter 8 - Andrej pays BabaYaga 100 units via the RESTful API"
-  echo "${WHITE}Starting the node"
-  ./tbb run &
+  ## tx_postman 1:port 2:from 3:to 4:value 4:data 6:colour
+  tx_postman () {
+    cmd=$'curl -s --location --request POST \'http:/localhost:'$1$'/tx/add\'
+    --header \'Content-Type: application/json\'
+    --data-raw \'{"from": "'$2$'","to": "'$3$'","value": '$4$',"data": "'$5$'"}\''
+  echo "*** $2 transfers $4 to $3 for $5 ***"
+  eval $cmd
+  echo
+  #bash -c "$cmd"
+  }
+  echo $WHITE"Running Chapter 8 - Andrej pays BabaYaga 100 units via the RESTful API and rewards himself for the new solution"
+  if [ $chapter -eq 8 ]; then echo "${WHITE}Starting the node";fi
+  ## Leave andre to have the default data directory so the previous transactions from test 3 & 4 are used
+  showDoCmd "./tbb run --port=8080 &" $GREEN
   sleep 1
-  showDoCmd "curl -s --http2 http://localhost:8080/balances/list | json_pp" $CYAN
-  tx_postman andrej babayaga 100 gift $POWDER_BLUE
+  if [ $chapter -eq 8 ]; then showDoCmd "curl -s --http2 http://localhost:8080/balances/list | json_pp" $CYAN;fi
+  tx_postman 8080 andrej babayaga 100 gift $POWDER_BLUE
   ## This next line shows the wrong balance because the state is persisted in memory of other the API process
-  echo $GREEN"Chapter 8 processed"
-  showDoCmd "curl -s --http2 http://localhost:8080/balances/list | json_pp"
+  if [ $chapter -eq 8 ]; then showDoCmd "curl -s --http2 http://localhost:8080/balances/list | json_pp";fi
   ## Burn out compensation
   showDoCmd "./tbb tx add --from=andrej --to=andrej --value=24700 --data=reward" ${POWDER_BLUE}
-  echo $GREEN"Burn out compensation added"
+  if [ $chapter -eq 8 ]; then echo $GREEN"Burn out compensation added";fi
+  echo $GREEN"Chapter 8 processed"
   showDoCmd "./tbb balances list"
 fi
 
 if [ $chapter -ge 10 ]; then
+  showBalances() {
+    showDoCmd "./tbb balances list" ${GREEN}"Andrej Service:"
+    showDoCmd "./tbb balances list --datadir=$datad/babayaga" ${YELLOW}"BabaYaga Service:"
+    showDoCmd "./tbb balances list --datadir=$datad/caesar" ${CYAN}"Caesar Service:"
+  }
   echo $WHITE"Running Chapter 10 - Peer-to-Peer DB Sync"
   showDoCmd "curl -s --http2 curl -X GET http://localhost:8080/node/status | json_pp" $CYAN
-#  tx_postman andrej babayaga 100 gift $POWDER_BLUE
-#  ## This next line shows the wrong balance because the state is persisted in memory of other the API process
-#  echo $GREEN"Chapter 8 processed"
-#  showDoCmd "curl -s --http2 http://localhost:8080/balances/list | json_pp"
-#  ## Burn out compensation
-#  showDoCmd "./tbb tx add --from=andrej --to=andrej --value=24700 --data=reward" ${POWDER_BLUE}
-#  echo $GREEN"Burn out compensation added"
-  showDoCmd "./tbb balances list"
+
+  echo "${CYAN}Creating 2 more nodes in background"
+  showDoCmd "./tbb run --datadir=$datad/babayaga --port=8081 &" $YELLOW
+  sleep 2
+  showDoCmd "./tbb run --datadir=$datad/caesar --port=8082 &" $CYAN
+  sleep 2
+  showBalances
+  echo "${WHITE}Waiting 50 seconds to watch synch checks"
+  sleep 50
+  showBalances
+  sleep 10
+  tx_postman 8080 andrej babayaga 100 FirstCustomerAward $POWDER_BLUE
+  showBalances
+  sleep 15
+  tx_postman 8081 babayaga andrej 5 vodkas $POWDER_BLUE
+  showBalances
+  echo "${WHITE}Waiting 25 seconds to watch synch checks"
+  sleep 25
+  showBalances
+  echo "${WHITE}Waiting 45 seconds to watch synch checks"
+  sleep 45
+  showBalances
+  killall tbb
 fi
-
-
-
 
 if [ $chapter ]; then echo $WHITE"All done up until chapter $chapter";fi
 
-blockdb="$datad/db/block.db"
-echo $blockdb
-if [ -f $blockdb ]; then tail $blockdb;fi
-
+read -p "Do you want to see the blockchain files? ${YELLOW}(y to see)${NORMAL} ? " yn
+if [ "$yn" == "y" ];then
+  for d in $datad/*/; do
+    if [ "$d" == "$datad/db/" ]; then d="${datad}/";fi
+    blockdb="${d}db/block.db"
+    echo $blockdb
+    if [ -f $blockdb ]; then tail $blockdb;fi
+  done
+fi

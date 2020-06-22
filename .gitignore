@@ -1,5 +1,6 @@
 /vendor/
 /data/
-/db/genesis.json
+!/data/README.md
 # If you want a copy of this great pdf go to https://gumroad.com/l/build-a-blockchain-from-scratch-in-go
 /static/build-blockchain-from-scratch-in-go.pdf
+/tbb
